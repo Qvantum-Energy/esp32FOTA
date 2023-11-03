@@ -141,7 +141,7 @@ extern "C" {
   #define F_Update Update
   #define F_hasZlib() false
   #define F_isZlibStream() false
-  #define F_canBegin() F_Update.begin(updateSize, partition)
+  #define F_canBegin() F_Update.begin(updateSize, partition, -1, LOW, _cfg.filesystem_partition_label)
   #define F_UpdateEnd() F_Update.end()
   #define F_abort() F_Update.abort()
   #define F_writeStream() F_Update.writeStream(*_stream);
@@ -205,6 +205,7 @@ struct FOTAConfig_t
 {
   char*        name { nullptr };
   char*        manifest_url { nullptr };
+  char*        filesystem_partition_label { nullptr };
   SemverClass  sem {0};
   bool         check_sig { false };
   bool         unsafe { false };

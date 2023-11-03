@@ -173,6 +173,7 @@ void esp32FOTA::setConfig( FOTAConfig_t cfg )
 {
     setString( &_cfg.name, cfg.name );
     setString( &_cfg.manifest_url, cfg.manifest_url );
+    setString( &_cfg.filesystem_partition_label, cfg.filesystem_partition_label );
 
     _cfg.sem           = cfg.sem;
     _cfg.check_sig     = cfg.check_sig;
@@ -187,12 +188,13 @@ void esp32FOTA::setConfig( FOTAConfig_t cfg )
 void esp32FOTA::printConfig( FOTAConfig_t *cfg )
 {
   if( cfg == nullptr ) cfg = &_cfg;
-  log_d("Name: %s\nManifest URL:%s\nSemantic Version: %d.%d.%d\nCheck Sig: %s\nUnsafe: %s\nUse Device ID: %s\nRootCA: %s\nPubKey: %s\nSignatureLen: %d\n",
+  log_d("Name: %s\nManifest URL:%s\nSemantic Version: %d.%d.%d\nFilesystem partition name: %s\"Check Sig: %s\nUnsafe: %s\nUse Device ID: %s\nRootCA: %s\nPubKey: %s\nSignatureLen: %d\n",
     cfg->name ? cfg->name : "None",
     cfg->manifest_url ? cfg->manifest_url : "None",
     cfg->sem.ver()->major,
     cfg->sem.ver()->minor,
     cfg->sem.ver()->patch,
+    cfg->filesystem_partition_label,
     cfg->check_sig ?"true":"false",
     cfg->unsafe ?"true":"false",
     cfg->use_device_id ?"true":"false",
