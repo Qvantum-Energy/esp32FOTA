@@ -767,9 +767,9 @@ bool esp32FOTA::checkJSONManifest(JsonVariant doc)
         }
     } else { // JSON was malformed - no firmware target was provided
         log_e("JSON manifest was missing one of the required keys :(" );
-        String prettyJson;
+        std::string prettyJson;
         serializeJsonPretty(doc, prettyJson);
-        log_d("%s", prettyJson);
+        log_d("%s", prettyJson.c_str());
         return false;
     }
 
