@@ -36,6 +36,10 @@
 #include "mbedtls/md.h"
 #include "esp_ota_ops.h"
 
+#ifndef SPI_FLASH_SEC_SIZE
+#include "spi_flash_mmap.h"
+#endif
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
