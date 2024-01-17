@@ -34,7 +34,6 @@
 
 #include "mbedtls/pk.h"
 #include "mbedtls/md.h"
-#include "mbedtls/md_internal.h"
 #include "esp_ota_ops.h"
 
 #pragma GCC diagnostic push
@@ -328,14 +327,16 @@ bool esp32FOTA::validate_sig( const esp_partition_t* partition, unsigned char *s
 
     free( _buffer );
 
-    unsigned char *hash = (unsigned char*)malloc( mdinfo->size );
+    const auto hashsize = mbedtls_md_get_size(mdinfo);
+
+    unsigned char *hash = (unsigned char*)malloc(hashsize);
     if(!hash){
         log_e( "malloc failed" );
         return false;
     }
     mbedtls_md_finish( &rsa, hash );
 
-    ret = mbedtls_pk_verify( &pk, MBEDTLS_MD_SHA256, hash, mdinfo->size, (unsigned char*)signature, _cfg.signature_len );
+    ret = mbedtls_pk_verify( &pk, MBEDTLS_MD_SHA256, hash, hashsize, (unsigned char*)signature, _cfg.signature_len );
 
     free( hash );
     mbedtls_md_free( &rsa );
