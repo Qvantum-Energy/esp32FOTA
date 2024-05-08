@@ -35,6 +35,7 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/md.h"
 #include "esp_ota_ops.h"
+#include "WiFi.h"
 
 #ifndef SPI_FLASH_SEC_SIZE
 #include "spi_flash_mmap.h"
