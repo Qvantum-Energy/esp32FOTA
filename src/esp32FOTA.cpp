@@ -700,7 +700,7 @@ void esp32FOTA::getPartition( int update_partition )
 
 
 
-bool esp32FOTA::checkJSONManifest(JsonVariant doc)
+bool esp32FOTA::checkJSONManifest(JsonVariant doc, int groupNumber)
 {
     if(strcmp(doc["type"].as<const char *>(), _cfg.name) != 0) {
         log_d("Payload type in manifest %s doesn't match current firmware %s", doc["type"].as<const char *>(), _cfg.name );
@@ -708,6 +708,17 @@ bool esp32FOTA::checkJSONManifest(JsonVariant doc)
         return false;  // Move to the next entry in the manifest
     }
     log_i("Payload type in manifest %s matches current firmware %s", doc["type"].as<const char *>(), _cfg.name );
+
+    if (groupNumber >= 0 && doc["upToGroup"].is<uint16_t>()) {
+        int maximumGroupNumber = (int)doc["upToGroup"].as<uint16_t>();
+        if (groupNumber > maximumGroupNumber) {
+            log_i("Not performing this update (minimum group number: %d, this group number: %d)", maximumGroupNumber, groupNumber);
+            return false;
+        }
+    }
+    else {
+        log_i("No valid group number in manifest, not performing group number check (%d)", groupNumber);
+    }
 
     _flashFileSystemUrl.clear();
     _firmwareUrl.clear();
@@ -788,7 +799,7 @@ bool esp32FOTA::checkJSONManifest(JsonVariant doc)
 
 
 
-bool esp32FOTA::execHTTPcheck()
+bool esp32FOTA::execHTTPcheck(int groupNumber)
 {
     String useURL = String( _cfg.manifest_url );
 
@@ -858,13 +869,13 @@ bool esp32FOTA::execHTTPcheck()
         // Although improbable given the size on JSONResult buffer, we already received an array of multiple firmware types and/or versions
         JsonArray arr = JSONResult.as<JsonArray>();
         for (JsonVariant JSONDocument : arr) {
-            if(checkJSONManifest(JSONDocument)) {
+            if(checkJSONManifest(JSONDocument, groupNumber)) {
                 // TODO: filter "highest vs next" version number for JSON with only one firmware type but several version numbers
                 return true;
             }
         }
     } else if (JSONResult.is<JsonObject>()) {
-        if(checkJSONManifest(JSONResult.as<JsonVariant>()))
+        if(checkJSONManifest(JSONResult.as<JsonVariant>(), groupNumber))
             return true;
     }
 
