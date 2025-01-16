@@ -255,7 +255,12 @@ public:
   bool execOTA();
   bool execSPIFFSOTA();
   bool execOTA( int partition, bool restart_after = true );
-  bool execHTTPcheck();
+
+  /*
+   * Checks if an OTA update is available. Optionally, supply a group number, if it's higher than the group number in the version.json,
+   * it will not update. This is used for partial rollout of updates.
+   */
+  bool execHTTPcheck(int groupNumber = -1);
 
   void useDeviceId( bool use=true ) { _cfg.use_device_id = use; }
 
@@ -378,7 +383,7 @@ private:
   std::map<String,String> extraHTTPHeaders; // this holds the extra http headers defined by the user
 
   String getDeviceID();
-  bool checkJSONManifest(JsonVariant JSONDocument);
+  bool checkJSONManifest(JsonVariant JSONDocument, int groupNumber);
   void debugSemVer( const char* label, semver_t* version );
   void getPartition( int update_partition );
 
