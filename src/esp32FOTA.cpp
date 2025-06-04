@@ -236,7 +236,7 @@ void esp32FOTA::setupCryptoAssets()
 
 void esp32FOTA::handle()
 {
-  if ( execHTTPcheck() ) {
+  if ( execHTTPcheck() == OtaCheckStatus::UPDATE_AVAILABLE ) {
       execOTA();
   }
 }
@@ -925,7 +925,7 @@ bool esp32FOTA::forceUpdate(const char* firmwareHost, uint16_t firmwarePort, con
 bool esp32FOTA::forceUpdate(bool validate )
 {
     // Forces an update from a manifest, ignoring the version check
-    if(!execHTTPcheck()) {
+    if(execHTTPcheck() < OtaCheckStatus::UPDATE_AVAILABLE) {
         if (!_firmwareUrl) {
             // execHTTPcheck returns false when the manifest is malformed or when the version isn't
             // an upgrade. If _firmwareUrl isn't set we can't force an upgrade.
