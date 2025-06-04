@@ -797,15 +797,13 @@ bool esp32FOTA::checkJSONManifest(JsonVariant doc, int groupNumber)
 }
 
 
-
-
-bool esp32FOTA::execHTTPcheck(int groupNumber)
+esp32FOTA::OtaCheckStatus esp32FOTA::execHTTPcheck(int groupNumber)
 {
     String useURL = String( _cfg.manifest_url );
 
     if( useURL.isEmpty() ) {
       log_e("No manifest_url provided in config, aborting!");
-      return false;
+      return OtaCheckStatus::NO_MANIFEST_URL;
     }
 
     // being deprecated, soon unsupported!
@@ -828,14 +826,14 @@ bool esp32FOTA::execHTTPcheck(int groupNumber)
 
     if ( isConnected && !isConnected() ) { // Check the current connection status
         log_i("Connection check requested but network not ready - skipping");
-        return false;  // WiFi not connected
+        return OtaCheckStatus::WIFI_DISCONNECTED;  // WiFi not connected
     }
 
     log_i("Getting HTTP: %s", useURL.c_str());
 
     if(! setupHTTP( useURL.c_str() ) ) {
       log_e("Unable to setup http, aborting!");
-      return false;
+      return OtaCheckStatus::SETUP_HTTP_FAILED;
     }
 
     int httpCode = _http.GET();  //Make the request
@@ -850,7 +848,7 @@ bool esp32FOTA::execHTTPcheck(int groupNumber)
             log_d("Unknown HTTP response");
         }
         _http.end();
-        return false;
+        return OtaCheckStatus::HTTP_REQUEST_FAILED;
     }
 
     // TODO: use payload.length() to speculate on JSONResult buffer size
@@ -860,7 +858,7 @@ bool esp32FOTA::execHTTPcheck(int groupNumber)
 
     if (err) {  // Check for errors in parsing, or JSON length may exceed buffer size
         log_e("JSON Parsing failed (%s, in=%d bytes, buff=%d bytes):", err.c_str(), _http.getSize(), JSON_FW_BUFF_SIZE );
-        return false;
+        return OtaCheckStatus::JSON_PARSING_FAILED;
     }
 
     _http.end();  // We're done with HTTP - free the resources
@@ -871,15 +869,15 @@ bool esp32FOTA::execHTTPcheck(int groupNumber)
         for (JsonVariant JSONDocument : arr) {
             if(checkJSONManifest(JSONDocument, groupNumber)) {
                 // TODO: filter "highest vs next" version number for JSON with only one firmware type but several version numbers
-                return true;
+                return OtaCheckStatus::UPDATE_AVAILABLE;
             }
         }
     } else if (JSONResult.is<JsonObject>()) {
         if(checkJSONManifest(JSONResult.as<JsonVariant>(), groupNumber))
-            return true;
+            return OtaCheckStatus::UPDATE_AVAILABLE;
     }
 
-    return false; // We didn't get a hit against the above, return false
+    return OtaCheckStatus::UP_TO_DATE; // We didn't get a hit against the above, return up to date
 }
 
 

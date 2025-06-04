@@ -256,11 +256,22 @@ public:
   bool execSPIFFSOTA();
   bool execOTA( int partition, bool restart_after = true );
 
+  enum class OtaCheckStatus : int8_t
+  {
+    UPDATE_AVAILABLE = 1,
+    UP_TO_DATE = 0,
+    NO_MANIFEST_URL = -1,
+    WIFI_DISCONNECTED = -2,
+    SETUP_HTTP_FAILED = -3,
+    HTTP_REQUEST_FAILED = -4,
+    JSON_PARSING_FAILED = -5
+  };
+
   /*
    * Checks if an OTA update is available. Optionally, supply a group number, if it's higher than the group number in the version.json,
    * it will not update. This is used for partial rollout of updates.
    */
-  bool execHTTPcheck(int groupNumber = -1);
+  OtaCheckStatus execHTTPcheck(int groupNumber = -1);
 
   void useDeviceId( bool use=true ) { _cfg.use_device_id = use; }
 
