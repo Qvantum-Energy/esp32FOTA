@@ -225,7 +225,7 @@ void esp32FOTA::setupCryptoAssets()
 
 void esp32FOTA::handle()
 {
-    if (execHTTPcheck().first == OtaCheckStatus::UPDATE_AVAILABLE)
+    if (execHTTPcheck() == OtaCheckStatus::UPDATE_AVAILABLE)
     {
         execOTA();
     }
@@ -762,13 +762,13 @@ void esp32FOTA::getPartition(int update_partition)
     }
 }
 
-std::pair<bool, String> esp32FOTA::checkJSONManifest(JsonVariant doc, int groupNumber)
+bool esp32FOTA::checkJSONManifest(JsonVariant doc, int groupNumber)
 {
     if (strcmp(doc["type"].as<const char *>(), _cfg.name) != 0)
     {
         log_d("Payload type in manifest %s doesn't match current firmware %s", doc["type"].as<const char *>(), _cfg.name);
         log_d("Doesn't match type: %s", _cfg.name);
-        return {false, ""}; // Move to the next entry in the manifest
+        return false; // Move to the next entry in the manifest
     }
     log_i("Payload type in manifest %s matches current firmware %s", doc["type"].as<const char *>(), _cfg.name);
 
@@ -778,7 +778,7 @@ std::pair<bool, String> esp32FOTA::checkJSONManifest(JsonVariant doc, int groupN
         if (groupNumber > maximumGroupNumber)
         {
             log_i("Not performing this update (minimum group number: %d, this group number: %d)", maximumGroupNumber, groupNumber);
-            return {false, ""};
+            return false;
         }
     }
     else
@@ -862,25 +862,25 @@ std::pair<bool, String> esp32FOTA::checkJSONManifest(JsonVariant doc, int groupN
         std::string prettyJson;
         serializeJsonPretty(doc, prettyJson);
         log_d("%s", prettyJson.c_str());
-        return {false, ""};
+        return false;
     }
 
     if (semver_compare(*_payload_sem.ver(), *_cfg.sem.ver()) == 1)
     {
-        return {true, _firmwareUrl};
+        return true;
     }
 
-    return {false, _firmwareUrl};
+    return false;
 }
 
-std::pair<esp32FOTA::OtaCheckStatus, String> esp32FOTA::execHTTPcheck(int groupNumber)
+esp32FOTA::OtaCheckStatus esp32FOTA::execHTTPcheck(int groupNumber)
 {
     String useURL = String(_cfg.manifest_url);
 
     if (useURL.isEmpty())
     {
         log_e("No manifest_url provided in config, aborting!");
-        return {OtaCheckStatus::NO_MANIFEST_URL, ""};
+        return OtaCheckStatus::NO_MANIFEST_URL;
     }
 
     // being deprecated, soon unsupported!
@@ -905,7 +905,7 @@ std::pair<esp32FOTA::OtaCheckStatus, String> esp32FOTA::execHTTPcheck(int groupN
     if (isConnected && !isConnected())
     { // Check the current connection status
         log_i("Connection check requested but network not ready - skipping");
-        return {OtaCheckStatus::WIFI_DISCONNECTED, ""}; // WiFi not connected
+        return OtaCheckStatus::WIFI_DISCONNECTED; // WiFi not connected
     }
 
     log_i("Getting HTTP: %s", useURL.c_str());
@@ -913,7 +913,7 @@ std::pair<esp32FOTA::OtaCheckStatus, String> esp32FOTA::execHTTPcheck(int groupN
     if (!setupHTTP(useURL.c_str()))
     {
         log_e("Unable to setup http, aborting!");
-        return {OtaCheckStatus::SETUP_HTTP_FAILED, ""};
+        return OtaCheckStatus::SETUP_HTTP_FAILED;
     }
 
     int httpCode = _http.GET(); // Make the request
@@ -932,7 +932,7 @@ std::pair<esp32FOTA::OtaCheckStatus, String> esp32FOTA::execHTTPcheck(int groupN
             log_d("Unknown HTTP response");
         }
         _http.end();
-        return {OtaCheckStatus::HTTP_REQUEST_FAILED, ""};
+        return OtaCheckStatus::HTTP_REQUEST_FAILED;
     }
 
 // TODO: use payload.length() to speculate on JSONResult buffer size
@@ -943,34 +943,31 @@ std::pair<esp32FOTA::OtaCheckStatus, String> esp32FOTA::execHTTPcheck(int groupN
     if (err)
     { // Check for errors in parsing, or JSON length may exceed buffer size
         log_e("JSON Parsing failed (%s, in=%d bytes, buff=%d bytes):", err.c_str(), _http.getSize(), JSON_FW_BUFF_SIZE);
-        return {OtaCheckStatus::JSON_PARSING_FAILED, ""};
+        return OtaCheckStatus::JSON_PARSING_FAILED;
     }
 
     _http.end(); // We're done with HTTP - free the resources
 
-    std::pair<bool, String> checkJSONManifestResponse = std::make_pair(false, "");
     if (JSONResult.is<JsonArray>())
     {
         // Although improbable given the size on JSONResult buffer, we already received an array of multiple firmware types and/or versions
         JsonArray arr = JSONResult.as<JsonArray>();
         for (JsonVariant JSONDocument : arr)
         {
-            checkJSONManifestResponse = checkJSONManifest(JSONDocument, groupNumber);
-            if (checkJSONManifestResponse.first)
+            if (checkJSONManifest(JSONDocument, groupNumber))
             {
                 // TODO: filter "highest vs next" version number for JSON with only one firmware type but several version numbers
-                return {OtaCheckStatus::UPDATE_AVAILABLE, checkJSONManifestResponse.second};
+                return OtaCheckStatus::UPDATE_AVAILABLE;
             }
         }
     }
     else if (JSONResult.is<JsonObject>())
     {
-        checkJSONManifestResponse = checkJSONManifest(JSONResult.as<JsonVariant>(), groupNumber);
-        if (checkJSONManifestResponse.first)
-            return {OtaCheckStatus::UPDATE_AVAILABLE, checkJSONManifestResponse.second};
+        if (checkJSONManifest(JSONResult.as<JsonVariant>(), groupNumber))
+            return OtaCheckStatus::UPDATE_AVAILABLE;
     }
 
-    return {OtaCheckStatus::UP_TO_DATE, checkJSONManifestResponse.second}; // We didn't get a hit against the above, return up to date
+    return OtaCheckStatus::UP_TO_DATE; // We didn't get a hit against the above, return up to date
 }
 
 String esp32FOTA::getDeviceID()
@@ -1015,7 +1012,7 @@ bool esp32FOTA::forceUpdate(const char *firmwareHost, uint16_t firmwarePort, con
 bool esp32FOTA::forceUpdate(bool validate)
 {
     // Forces an update from a manifest, ignoring the version check
-    if (execHTTPcheck().first < OtaCheckStatus::UPDATE_AVAILABLE)
+    if (execHTTPcheck() < OtaCheckStatus::UPDATE_AVAILABLE)
     {
         if (!_firmwareUrl)
         {
