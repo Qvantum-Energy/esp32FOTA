@@ -53,7 +53,7 @@ static bool WiFiStatusCheck();
 SemverClass::SemverClass(const char *version)
 {
     assert(version);
-    if (semver_parse_version(version, &_ver))
+    if (semver_parse(version, &_ver))
     {
         log_w("Invalid semver string '%s' passed to constructor. Defaulting to 0", version);
         _ver = semver_t{0, 0, 0};
